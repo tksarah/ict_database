@@ -622,6 +622,9 @@ export default function Home() {
   const sqliteRef = useRef<Sqlite3Static | null>(null);
   const dbRef = useRef<Database | null>(null);
   const resultRef = useRef<HTMLElement | null>(null);
+  const missionTopRef = useRef<HTMLElement | null>(null);
+  const missionTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const pendingMissionScrollRef = useRef(false);
   const [dbReady, setDbReady] = useState(false);
   const [dbVersion, setDbVersion] = useState("");
   const [loadingError, setLoadingError] = useState("");
@@ -695,6 +698,28 @@ export default function Home() {
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   }, [completedMissionIds, currentMissionId, progressLoaded]);
+
+  useEffect(() => {
+    if (!pendingMissionScrollRef.current) return;
+    pendingMissionScrollRef.current = false;
+
+    const frame = window.requestAnimationFrame(() => {
+      const missionTop = missionTopRef.current;
+      const missionTitle = missionTitleRef.current;
+      if (!missionTop || !missionTitle) return;
+
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      missionTitle.focus({ preventScroll: true });
+      missionTop.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentMissionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -882,8 +907,8 @@ export default function Home() {
       (mission) => mission.id === currentMissionId,
     );
     if (index < MISSIONS.length - 1) {
+      pendingMissionScrollRef.current = true;
       setCurrentMissionId(MISSIONS[index + 1].id as MissionId);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       setStatus(
         "4つのミッションを完了しました！発展WHEREか自由SQLラボに進めます。",
@@ -1021,10 +1046,12 @@ export default function Home() {
         </nav>
 
         <section className="workspace" aria-labelledby="lesson-title">
-          <header className="lesson-heading">
+          <header className="lesson-heading" ref={missionTopRef}>
             <div>
               <p className="eyebrow">{scenario.kicker}</p>
-              <h2 id="lesson-title">{scenario.title}</h2>
+              <h2 id="lesson-title" ref={missionTitleRef} tabIndex={-1}>
+                {scenario.title}
+              </h2>
             </div>
             <p className="lesson-goal">{scenario.goal}</p>
           </header>

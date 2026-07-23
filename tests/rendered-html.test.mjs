@@ -78,6 +78,9 @@ test("スターター用プレビューを残さない", async () => {
   assert.doesNotMatch(page, /menu_items\.shop_id|shops\.shop_id/);
   assert.match(page, /<summary>SQLiteからの詳細<\/summary>/);
   assert.match(page, /setHasResult\(false\)/);
+  assert.match(page, /pendingMissionScrollRef\.current = true/);
+  assert.match(page, /missionTop\.scrollIntoView/);
+  assert.doesNotMatch(page, /window\.scrollTo\(\{\s*top:\s*0/);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 

@@ -426,6 +426,7 @@ pre {
   align-items: end;
   gap: 34px;
   margin: 0 auto 24px;
+  scroll-margin-top: 98px;
 }
 
 .eyebrow {
@@ -1546,6 +1547,10 @@ pre {
     overflow: visible;
     border-right: 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  .lesson-heading {
+    scroll-margin-top: 24px;
   }
 
   .mission-list {
