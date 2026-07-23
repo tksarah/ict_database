@@ -9,6 +9,8 @@ import type {
 
 type MissionId = "table" | "create" | "insert" | "select";
 type LabView = "mission" | "bonus" | "free";
+type TokenKind = "keyword" | "table" | "column" | "value";
+type ResultMode = "anatomy" | "structure" | "relation" | "selection" | "where" | "free";
 
 type SqlTable = {
   columns: string[];
@@ -26,6 +28,12 @@ type CheckpointOption = {
   label: string;
 };
 
+type GuideToken = {
+  text: string;
+  label: string;
+  kind: TokenKind;
+};
+
 type Scenario = {
   id: MissionId | "where" | "free";
   number?: number;
@@ -35,10 +43,19 @@ type Scenario = {
   goal: string;
   task: string;
   expectedKeyword?: "CREATE" | "INSERT" | "SELECT";
+  categoryLabel: string;
+  categoryName: string;
+  commandName: string;
+  commandSummary: string;
+  commandDetail: string;
+  guideTokens: GuideToken[];
   seedSql: string;
   starterSql: string;
   previewSql: string;
   hints: string[];
+  observations: string[];
+  resultMode: ResultMode;
+  showSqlOverview?: boolean;
   checkpoint?: {
     question: string;
     options: CheckpointOption[];
@@ -97,17 +114,36 @@ const MISSIONS: Scenario[] = [
     kicker: "MISSION 1",
     title: "表のしくみを見つけよう",
     shortTitle: "表のしくみ",
-    goal: "行・列・セルを見分け、1行が1件のデータを表すことを確認します。",
-    task: "shopsテーブルをSELECTして、店舗データが行と列で表示される様子を見てみよう。",
+    goal: "SELECTの役割を知り、結果表から行・列・セルを見分けます。",
+    task: "shopsテーブルのすべてのデータを取り出し、結果表の形を観察しよう。",
     expectedKeyword: "SELECT",
+    categoryLabel: "DML",
+    categoryName: "データ操作言語",
+    commandName: "SELECT",
+    commandSummary: "テーブルからデータを取り出す命令です。",
+    commandDetail:
+      "今回はデータを変更せず、shopsテーブルに入っている内容を読み取ります。* は「すべての列」という意味です。",
+    guideTokens: [
+      { text: "SELECT", label: "取り出す命令", kind: "keyword" },
+      { text: "*", label: "すべての列", kind: "column" },
+      { text: "FROM", label: "どの表から", kind: "keyword" },
+      { text: "shops", label: "テーブル名", kind: "table" },
+    ],
     seedSql: `${CREATE_SHOPS}\n${SHOP_ROWS}`,
     starterSql: "SELECT * FROM shops;",
     previewSql: "SELECT * FROM shops;",
     hints: [
-      "表を横に見ると「行」、縦に見ると「列」です。",
-      "すべての列を取り出す記号は * です。",
+      "実行後は、見出しと1行目を見比べてみましょう。",
+      "* を使うと、テーブルのすべての列を取り出せます。",
       "SELECT * FROM shops;",
     ],
+    observations: [
+      "表の一番上に並ぶshop_id・shop_name・areaが「列」です。",
+      "横方向の1行が、1つの店舗を表します。",
+      "行と列が交わる1つの値を「セル」と呼びます。",
+    ],
+    resultMode: "anatomy",
+    showSqlOverview: true,
     checkpoint: {
       question: "shopsテーブルの1行は何を表しますか？",
       options: [
@@ -116,67 +152,113 @@ const MISSIONS: Scenario[] = [
         { id: "one-database", label: "データベース全体" },
       ],
       answer: "one-shop",
-      explanation: "正解です。1行（レコード）が1つの店舗を表します。",
+      explanation: "正解です。結果表の横方向の1行が、1つの店舗を表します。",
     },
   },
   {
     id: "create",
     number: 2,
     kicker: "MISSION 2",
-    title: "CREATEで表をつくろう",
+    title: "CREATE TABLEで表をつくろう",
     shortTitle: "CREATEで作る",
-    goal: "列名とデータ型を決め、主キーを持つshopsテーブルを作成します。",
-    task: "用意されたCREATE文を実行し、shop_id・shop_name・areaの3列を作ろう。",
+    goal: "表の構造を定義する命令を知り、主キーを持つshopsテーブルを作ります。",
+    task: "用意されたCREATE TABLE文を実行し、3つの列を持つshopsテーブルを作ろう。",
     expectedKeyword: "CREATE",
+    categoryLabel: "DDL",
+    categoryName: "データ定義言語",
+    commandName: "CREATE TABLE",
+    commandSummary: "新しいテーブルの形を決めて作る命令です。",
+    commandDetail:
+      "かっこの中へ「列名 データ型」の順で書きます。PRIMARY KEYは、その列を行の識別に使うという指定です。",
+    guideTokens: [
+      { text: "CREATE TABLE", label: "表を作る命令", kind: "keyword" },
+      { text: "shops", label: "テーブル名", kind: "table" },
+      {
+        text: "shop_id INTEGER PRIMARY KEY",
+        label: "列名・型・主キー",
+        kind: "column",
+      },
+      { text: "shop_name TEXT, area TEXT", label: "列名と型", kind: "column" },
+    ],
     seedSql: "",
     starterSql: CREATE_SHOPS.trim(),
     previewSql:
       "SELECT name AS column_name, type AS data_type, CASE pk WHEN 1 THEN 'PK' ELSE '' END AS key_type FROM pragma_table_info('shops');",
     hints: [
-      "表を作る命令は CREATE TABLE から始めます。",
-      "列は「列名 データ型」の順にカンマで区切ります。",
+      "shop_id列は、各店舗を見分ける番号として使います。",
+      "主キーにする列の型の後ろへ PRIMARY KEY と書きます。",
       CREATE_SHOPS.trim(),
     ],
+    observations: [
+      "shopsテーブルにはshop_id・shop_name・areaの3列があります。",
+      "shop_id列のデータ型はINTEGER、ほかの2列はTEXTです。",
+      "shop_id列にはPKと表示され、主キーに設定されています。",
+    ],
+    resultMode: "structure",
     checkpoint: {
       question: "店舗を一意に識別する列はどれですか？",
       options: [
-        { id: "shop-name", label: "shop_name" },
-        { id: "shop-id", label: "shop_id" },
-        { id: "area", label: "area" },
+        { id: "shop-name", label: "shop_name列" },
+        { id: "shop-id", label: "shop_id列" },
+        { id: "area", label: "area列" },
       ],
       answer: "shop-id",
-      explanation: "正解です。shop_idが主キーなので、同じ値は使えません。",
+      explanation:
+        "正解です。shopsテーブルのshop_id列が主キーなので、同じ値は使えません。",
     },
   },
   {
     id: "insert",
     number: 3,
     kicker: "MISSION 3",
-    title: "INSERTしてキーでつなごう",
+    title: "INSERT INTOでデータを追加しよう",
     shortTitle: "INSERTとキー",
-    goal: "商品を追加し、shopsの主キーとmenu_itemsの外部キーを関連付けます。",
-    task: "店舗1の商品「たこ焼き」をmenu_itemsに追加し、右の関係図と結果を確認しよう。",
+    goal: "新しい行を追加し、主キーと外部キーで2つのテーブルを関連付けます。",
+    task: "店舗1の商品「たこ焼き」をmenu_itemsテーブルへ追加し、キーのつながりを観察しよう。",
     expectedKeyword: "INSERT",
+    categoryLabel: "DML",
+    categoryName: "データ操作言語",
+    commandName: "INSERT INTO",
+    commandSummary: "テーブルへ新しい1行を追加する命令です。",
+    commandDetail:
+      "列名とVALUESの値は、左から同じ順番で対応します。shop_id列の値1は、shopsテーブルにある店舗1を指します。",
+    guideTokens: [
+      { text: "INSERT INTO", label: "行を追加する命令", kind: "keyword" },
+      { text: "menu_items", label: "追加先の表", kind: "table" },
+      {
+        text: "(item_id, shop_id, item_name, price)",
+        label: "列の順番",
+        kind: "column",
+      },
+      { text: "VALUES", label: "値を指定", kind: "keyword" },
+      { text: "(101, 1, 'たこ焼き', 500)", label: "追加する値", kind: "value" },
+    ],
     seedSql: `${CREATE_SHOPS}\n${CREATE_MENU_ITEMS}\n${SHOP_ROWS}`,
     starterSql:
       "INSERT INTO menu_items (item_id, shop_id, item_name, price)\nVALUES (101, 1, 'たこ焼き', 500);",
     previewSql:
       "SELECT item_id, shop_id, item_name, price FROM menu_items ORDER BY item_id;",
     hints: [
-      "INSERT INTOのあとに、追加先のテーブル名を書きます。",
-      "列とVALUESの値は、左から同じ順番で対応させます。",
+      "店舗1の商品なので、shop_id列には1を入れます。",
+      "かっこ内の列名とVALUESの値を、左から順に対応させましょう。",
       "INSERT INTO menu_items (item_id, shop_id, item_name, price)\nVALUES (101, 1, 'たこ焼き', 500);",
     ],
+    observations: [
+      "追加された行のshop_id列には1が入っています。",
+      "menu_itemsテーブルのshop_id列は、shopsテーブルのshop_id列を参照します。",
+      "存在しない店舗番号は、外部キーの制約によって追加できません。",
+    ],
+    resultMode: "relation",
     checkpoint: {
-      question: "menu_items.shop_idの役割はどれですか？",
+      question: "menu_itemsテーブルのshop_id列の役割はどれですか？",
       options: [
-        { id: "primary", label: "この表の主キー" },
-        { id: "foreign", label: "shopsを参照する外部キー" },
+        { id: "primary", label: "このテーブルの主キー" },
+        { id: "foreign", label: "shopsテーブルを参照する外部キー" },
         { id: "text", label: "商品名を保存する列" },
       ],
       answer: "foreign",
       explanation:
-        "正解です。menu_items.shop_idはshops.shop_idを参照する外部キーです。",
+        "正解です。menu_itemsテーブルのshop_id列は、shopsテーブルのshop_id列を参照する外部キーです。",
     },
   },
   {
@@ -185,26 +267,44 @@ const MISSIONS: Scenario[] = [
     kicker: "MISSION 4",
     title: "SELECTで必要な列を取り出そう",
     shortTitle: "SELECTで取得",
-    goal: "テーブルから必要な列を選び、結果表として取り出します。",
-    task: "shopsテーブルから店舗名と出店エリアだけを取り出してみよう。",
+    goal: "SELECTの後ろへ列名を書き、必要な情報だけを結果表として取り出します。",
+    task: "shopsテーブルから、店舗名と出店エリアの2列だけを取り出してみよう。",
     expectedKeyword: "SELECT",
+    categoryLabel: "DML",
+    categoryName: "データ操作言語",
+    commandName: "SELECT",
+    commandSummary: "指定した列だけをテーブルから取り出せます。",
+    commandDetail:
+      "SELECTの後ろへ見たい列名をカンマで区切って書き、FROMの後ろへ取り出し元のテーブル名を書きます。",
+    guideTokens: [
+      { text: "SELECT", label: "取り出す命令", kind: "keyword" },
+      { text: "shop_name, area", label: "取り出す列", kind: "column" },
+      { text: "FROM", label: "どの表から", kind: "keyword" },
+      { text: "shops", label: "テーブル名", kind: "table" },
+    ],
     seedSql: FULL_SEED,
     starterSql: "SELECT shop_name, area FROM shops;",
     previewSql: "SELECT shop_name, area FROM shops;",
     hints: [
-      "SELECTのあとには、見たい列名を書きます。",
-      "複数の列名はカンマで区切り、FROMのあとに表名を書きます。",
+      "今回は店舗名と出店エリアだけが必要です。",
+      "複数の列名は、SELECTの後ろでカンマを使って区切ります。",
       "SELECT shop_name, area FROM shops;",
     ],
+    observations: [
+      "結果表にはshop_name列とarea列だけが表示されています。",
+      "元のshopsテーブルにあるshop_id列は、今回の結果には含まれません。",
+      "SELECTでは、目的に合わせて表示する列を選べます。",
+    ],
+    resultMode: "selection",
     checkpoint: {
-      question: "必要な列を指定する場所はどこですか？",
+      question: "取り出したい列名を書く場所はどこですか？",
       options: [
-        { id: "after-select", label: "SELECTのあと" },
-        { id: "after-from", label: "FROMのあと" },
-        { id: "after-table", label: "表名のあと" },
+        { id: "after-select", label: "SELECTの後ろ" },
+        { id: "after-from", label: "FROMの後ろ" },
+        { id: "after-table", label: "テーブル名の後ろ" },
       ],
       answer: "after-select",
-      explanation: "正解です。SELECTのあとに、取り出したい列名を書きます。",
+      explanation: "正解です。SELECTの後ろに、取り出したい列名を書きます。",
     },
   },
 ];
@@ -214,19 +314,38 @@ const BONUS_SCENARIO: Scenario = {
   kicker: "BONUS",
   title: "WHEREで条件をしぼろう",
   shortTitle: "発展 WHERE",
-  goal: "条件に合う行だけを取り出す検索に挑戦します。",
+  goal: "SELECTへ条件を加え、条件に合う行だけを取り出します。",
   task: "価格が500円以上の商品だけを取り出してみよう。",
   expectedKeyword: "SELECT",
+  categoryLabel: "DML + 条件",
+  categoryName: "データ操作言語",
+  commandName: "WHERE",
+  commandSummary: "SELECTの結果を条件でしぼり込む部分です。",
+  commandDetail:
+    "WHEREは単独の命令ではありません。SELECT文の中で使い、今回はprice列が500以上という条件を指定します。",
+  guideTokens: [
+    { text: "SELECT", label: "取り出す命令", kind: "keyword" },
+    { text: "item_name, price", label: "取り出す列", kind: "column" },
+    { text: "FROM menu_items", label: "取り出し元の表", kind: "table" },
+    { text: "WHERE", label: "条件を追加", kind: "keyword" },
+    { text: "price >= 500", label: "500以上という条件", kind: "value" },
+  ],
   seedSql: FULL_SEED,
   starterSql:
     "SELECT item_name, price\nFROM menu_items\nWHERE price >= 500;",
   previewSql:
     "SELECT item_name, price FROM menu_items WHERE price >= 500 ORDER BY price;",
   hints: [
-    "条件は WHERE のあとに書きます。",
-    "500以上は price >= 500 と表します。",
+    "400円の商品は結果から外れるはずです。",
+    "500以上は、比較記号を使って price >= 500 と書きます。",
     "SELECT item_name, price\nFROM menu_items\nWHERE price >= 500;",
   ],
+  observations: [
+    "結果には500円以上の商品だけが表示されています。",
+    "400円のアイスコーヒーは条件に合わないため表示されません。",
+    "条件を変えると、取り出される行も変わります。",
+  ],
+  resultMode: "where",
 };
 
 const FREE_SCENARIO: Scenario = {
@@ -234,17 +353,57 @@ const FREE_SCENARIO: Scenario = {
   kicker: "FREE LAB",
   title: "自由SQLラボ",
   shortTitle: "自由SQLラボ",
-  goal: "CREATE・INSERT・SELECTを自由に組み合わせて試せます。",
-  task: "最初は学園祭のサンプルDBが入っています。1文ずつ実行して、結果を観察しよう。",
+  goal: "これまでに学んだ命令を、1文ずつ自由に試せます。",
+  task: "下の早見表を参考に、CREATE・INSERT・SELECTを実行して結果を観察しよう。",
+  categoryLabel: "REFERENCE",
+  categoryName: "SQL早見表",
+  commandName: "自由練習",
+  commandSummary: "CREATE・INSERT・SELECT・WHEREを見返しながら試せます。",
+  commandDetail:
+    "最初は学園祭のサンプルデータが入っています。実行できるSQLは1回につき1文です。",
+  guideTokens: [
+    { text: "CREATE TABLE", label: "表を作る", kind: "keyword" },
+    { text: "INSERT INTO", label: "行を追加する", kind: "keyword" },
+    { text: "SELECT", label: "データを取り出す", kind: "keyword" },
+    { text: "WHERE", label: "条件でしぼる", kind: "keyword" },
+  ],
   seedSql: FULL_SEED,
   starterSql: "SELECT * FROM shops;",
   previewSql: "SELECT * FROM shops;",
   hints: [
-    "まず SELECT * FROM shops; を実行して、現在の表を確認しましょう。",
-    "新しい表を作るときは CREATE TABLE、行を加えるときは INSERT INTO を使います。",
+    "まずはshopsテーブルの内容を取り出してみましょう。",
+    "新しい表はCREATE TABLE、行の追加はINSERT INTOを使います。",
     "SELECT item_name, price FROM menu_items WHERE price >= 500;",
   ],
+  observations: [
+    "SQLを変えると、表示される結果やデータベースの状態が変わります。",
+    "失敗しても「やり直す」でサンプルデータへ戻せます。",
+  ],
+  resultMode: "free",
 };
+
+const QUICK_REFERENCE = [
+  {
+    command: "CREATE TABLE",
+    meaning: "新しいテーブルを作る",
+    example: "CREATE TABLE 表名 (列名 データ型);",
+  },
+  {
+    command: "INSERT INTO",
+    meaning: "テーブルへ1行追加する",
+    example: "INSERT INTO 表名 (列名) VALUES (値);",
+  },
+  {
+    command: "SELECT",
+    meaning: "データを取り出す",
+    example: "SELECT 列名 FROM 表名;",
+  },
+  {
+    command: "WHERE",
+    meaning: "取り出す行を条件でしぼる",
+    example: "SELECT 列名 FROM 表名 WHERE 条件;",
+  },
+];
 
 let sqliteLoader: Promise<Sqlite3Static> | null = null;
 
@@ -296,7 +455,7 @@ function validateUserSql(sql: string) {
     return {
       ok: false as const,
       message:
-        "このラボで実行できるのは CREATE・INSERT・SELECT です。UPDATE・DELETE・DROPなどは初版の範囲外です。",
+        "このラボで実行できるのはCREATE・INSERT・SELECTです。UPDATE・DELETE・DROPなどは今回の学習範囲外です。",
     };
   }
 
@@ -317,28 +476,28 @@ function explainSqlError(error: unknown): SqlErrorState {
   ) {
     return {
       friendly:
-        "主キーの値が重複しています。主キーには、まだ使われていない値を指定しましょう。",
+        "主キーに同じ値が使われています。主キーには、まだ使われていない値を指定しましょう。",
       raw,
     };
   }
   if (normalized.includes("foreign key constraint failed")) {
     return {
       friendly:
-        "参照先の店舗が見つかりません。menu_items.shop_idには、shopsに存在するshop_idを指定しましょう。",
+        "参照先の店舗が見つかりません。menu_itemsテーブルのshop_id列には、shopsテーブルに存在するshop_idを指定しましょう。",
       raw,
     };
   }
   if (normalized.includes("no such table")) {
     return {
       friendly:
-        "指定したテーブルが見つかりません。表名のつづりと、CREATE済みかどうかを確認しましょう。",
+        "指定したテーブルが見つかりません。テーブル名のつづりと、CREATE済みかどうかを確認しましょう。",
       raw,
     };
   }
   if (normalized.includes("no such column")) {
     return {
       friendly:
-        "指定した列が見つかりません。右の関係図で列名を確認しましょう。",
+        "指定した列が見つかりません。表の関係図や結果表で列名を確認しましょう。",
       raw,
     };
   }
@@ -348,7 +507,7 @@ function explainSqlError(error: unknown): SqlErrorState {
   ) {
     return {
       friendly:
-        "SQLの書き方に誤りがあります。キーワード、カンマ、かっこ、引用符を確認しましょう。",
+        "SQLの書き方に誤りがあります。命令、カンマ、かっこ、引用符を確認しましょう。",
       raw,
     };
   }
@@ -363,9 +522,106 @@ function isMissionId(value: string): value is MissionId {
   return MISSIONS.some((mission) => mission.id === value);
 }
 
+function SqlOverview() {
+  return (
+    <section className="sql-overview" aria-labelledby="sql-overview-title">
+      <div className="overview-heading">
+        <span className="mini-label">最初に知っておこう</span>
+        <h3 id="sql-overview-title">SQLには2つの仕事があります</h3>
+        <p>
+          難しい名前を暗記する必要はありません。「表の形」と「中のデータ」で役割が違うことをつかみましょう。
+        </p>
+      </div>
+      <div className="overview-cards">
+        <article>
+          <span className="category-badge ddl">DDL</span>
+          <div>
+            <h4>データ定義言語</h4>
+            <p>テーブルの形を作ったり、列やデータ型を決めたりします。</p>
+            <code>CREATE TABLE</code>
+          </div>
+        </article>
+        <article>
+          <span className="category-badge dml">DML</span>
+          <div>
+            <h4>データ操作言語</h4>
+            <p>テーブルの中へ行を追加したり、必要なデータを取り出したりします。</p>
+            <code>INSERT INTO / SELECT</code>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function RelationDiagram() {
+  return (
+    <div
+      className="relationship"
+      role="img"
+      aria-label="shopsテーブルのshop_id主キーから、menu_itemsテーブルのshop_id外部キーへの一対多の関係"
+    >
+      <section className="table-card" aria-label="shopsテーブル">
+        <h4>shops</h4>
+        <ul>
+          <li className="pk-row">
+            <span className="key-label pk">PK</span>
+            <code>shop_id</code>
+            <small>INTEGER</small>
+          </li>
+          <li>
+            <span className="key-spacer" aria-hidden="true" />
+            <code>shop_name</code>
+            <small>TEXT</small>
+          </li>
+          <li>
+            <span className="key-spacer" aria-hidden="true" />
+            <code>area</code>
+            <small>TEXT</small>
+          </li>
+        </ul>
+      </section>
+
+      <div className="relation-line" aria-hidden="true">
+        <span>1</span>
+        <i />
+        <span>多</span>
+        <b>shop_id列で関連付け</b>
+      </div>
+
+      <section className="table-card" aria-label="menu_itemsテーブル">
+        <h4>menu_items</h4>
+        <ul>
+          <li>
+            <span className="key-label pk">PK</span>
+            <code>item_id</code>
+            <small>INTEGER</small>
+          </li>
+          <li className="fk-row">
+            <span className="key-label fk">FK</span>
+            <code>shop_id</code>
+            <small>INTEGER</small>
+          </li>
+          <li>
+            <span className="key-spacer" aria-hidden="true" />
+            <code>item_name</code>
+            <small>TEXT</small>
+          </li>
+          <li>
+            <span className="key-spacer" aria-hidden="true" />
+            <code>price</code>
+            <small>INTEGER</small>
+          </li>
+        </ul>
+      </section>
+    </div>
+  );
+}
+
 export default function Home() {
   const sqliteRef = useRef<Sqlite3Static | null>(null);
   const dbRef = useRef<Database | null>(null);
+  const resultRef = useRef<HTMLElement | null>(null);
   const [dbReady, setDbReady] = useState(false);
   const [dbVersion, setDbVersion] = useState("");
   const [loadingError, setLoadingError] = useState("");
@@ -380,10 +636,11 @@ export default function Home() {
   const [result, setResult] = useState<SqlTable>({
     columns: [],
     rows: [],
-    message: "SQLiteを準備しています。",
+    message: "まだSQLを実行していません。",
   });
+  const [hasResult, setHasResult] = useState(false);
   const [sqlError, setSqlError] = useState<SqlErrorState | null>(null);
-  const [status, setStatus] = useState("SQLiteを準備しています。");
+  const [status, setStatus] = useState("準備しています。");
   const [hintLevel, setHintLevel] = useState(0);
   const [checkpointChoice, setCheckpointChoice] = useState("");
   const [taskMet, setTaskMet] = useState(false);
@@ -396,8 +653,6 @@ export default function Home() {
     if (activeView === "free") return FREE_SCENARIO;
     return currentMission;
   }, [activeView, currentMission]);
-
-  const scenarioKey = `${activeView}:${scenario.id}`;
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -449,7 +704,7 @@ export default function Home() {
         sqliteRef.current = sqlite;
         setDbVersion(sqlite.version.libVersion);
         setDbReady(true);
-        setStatus("準備OK。SQLを実行してみよう。");
+        setStatus("準備OK。命令の説明を読んでからSQLを実行しましょう。");
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -479,14 +734,19 @@ export default function Home() {
     setHintLevel(0);
     setCheckpointChoice("");
     setTaskMet(false);
-    setResult(runTableQuery(db, scenario.previewSql));
+    setHasResult(false);
+    setResult({
+      columns: [],
+      rows: [],
+      message: "まだSQLを実行していません。",
+    });
     setStatus("この演習の初期状態を準備しました。");
   }, [scenario]);
 
   useEffect(() => {
     if (!dbReady) return;
     resetScenario();
-  }, [dbReady, resetScenario, scenarioKey]);
+  }, [dbReady, resetScenario]);
 
   useEffect(
     () => () => {
@@ -538,18 +798,29 @@ export default function Home() {
     [activeView, currentMission],
   );
 
+  const focusResult = () => {
+    window.requestAnimationFrame(() => {
+      const section = resultRef.current;
+      if (!section) return;
+      section.focus({ preventScroll: true });
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      section.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+  };
+
   const runSql = () => {
     const db = dbRef.current;
-    if (!db || !dbReady) {
-      setStatus("SQLiteの準備が終わるまで少し待ってください。");
-      return;
-    }
+    if (!db) return;
 
     const validation = validateUserSql(sql);
     if (!validation.ok) {
       setSqlError({ friendly: validation.message, raw: "実行前チェック" });
-      setStatus("SQLを実行できませんでした。");
-      setTaskMet(false);
+      setStatus("SQLを実行できませんでした。入力を確認しましょう。");
       return;
     }
 
@@ -576,16 +847,17 @@ export default function Home() {
 
       const met = checkTask(db, validation.keyword, nextResult);
       setResult(nextResult);
+      setHasResult(true);
       setTaskMet(met);
       setStatus(
         met && activeView === "mission"
-          ? "SQLは成功です。確認問題にも答えて、ミッションを完了しよう。"
+          ? "課題のSQLは成功です。結果を観察して、確認問題へ進みましょう。"
           : nextResult.message,
       );
+      focusResult();
     } catch (error: unknown) {
       setSqlError(explainSqlError(error));
-      setTaskMet(false);
-      setStatus("SQLエラーを確認して、もう一度試してみよう。");
+      setStatus("SQLを実行できませんでした。説明を確認して修正しましょう。");
     }
   };
 
@@ -611,6 +883,7 @@ export default function Home() {
     );
     if (index < MISSIONS.length - 1) {
       setCurrentMissionId(MISSIONS[index + 1].id as MissionId);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       setStatus(
         "4つのミッションを完了しました！発展WHEREか自由SQLラボに進めます。",
@@ -639,8 +912,8 @@ export default function Home() {
     setSqlError(null);
     setStatus(
       kind === "duplicate"
-        ? "同じitem_idを使うと、主キーのエラーを体験できます。"
-        : "存在しないshop_idを使うと、外部キーのエラーを体験できます。",
+        ? "同じ主キーを使うと、重複エラーを体験できます。"
+        : "存在しない店舗番号を使うと、外部キーのエラーを体験できます。",
     );
   };
 
@@ -748,13 +1021,13 @@ export default function Home() {
         </nav>
 
         <section className="workspace" aria-labelledby="lesson-title">
-          <div className="lesson-heading">
+          <header className="lesson-heading">
             <div>
               <p className="eyebrow">{scenario.kicker}</p>
               <h2 id="lesson-title">{scenario.title}</h2>
             </div>
             <p className="lesson-goal">{scenario.goal}</p>
-          </div>
+          </header>
 
           {completedMissionIds.length === 4 && activeView === "mission" ? (
             <div className="course-complete" role="status">
@@ -770,31 +1043,72 @@ export default function Home() {
             </div>
           ) : null}
 
-          <div className="lab-grid">
-            <section className="panel editor-panel" aria-labelledby="editor-title">
-              <div className="panel-heading">
+          <div className="learning-flow">
+            {scenario.showSqlOverview ? <SqlOverview /> : null}
+
+            <section className="step-card command-step" aria-labelledby="command-step-title">
+              <div className="step-heading">
+                <span className="step-number">1</span>
                 <div>
-                  <h3 id="editor-title">SQLエディター</h3>
-                  <p>{scenario.task}</p>
+                  <p>STEP 1</p>
+                  <h3 id="command-step-title">今回の命令を知る</h3>
+                </div>
+                <span
+                  className={`category-badge ${scenario.categoryLabel === "DDL" ? "ddl" : "dml"}`}
+                >
+                  {scenario.categoryLabel}
+                </span>
+              </div>
+              <div className="command-intro">
+                <div>
+                  <span>{scenario.categoryName}</span>
+                  <h4>{scenario.commandName}</h4>
+                </div>
+                <p>
+                  <strong>{scenario.commandSummary}</strong>
+                  {scenario.commandDetail}
+                </p>
+              </div>
+              <div className="syntax-guide" aria-label={`${scenario.commandName}の構文解説`}>
+                {scenario.guideTokens.map((token, index) => (
+                  <span
+                    className={`syntax-token token-${token.kind}`}
+                    key={`${token.text}-${index}`}
+                  >
+                    <code>{token.text}</code>
+                    <small>{token.label}</small>
+                  </span>
+                ))}
+              </div>
+
+              {scenario.id === "free" ? (
+                <details className="sql-reference" open>
+                  <summary>SQL早見表</summary>
+                  <div className="reference-grid">
+                    {QUICK_REFERENCE.map((item) => (
+                      <article key={item.command}>
+                        <code>{item.command}</code>
+                        <strong>{item.meaning}</strong>
+                        <p>{item.example}</p>
+                      </article>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </section>
+
+            <section className="step-card editor-panel" aria-labelledby="editor-title">
+              <div className="step-heading">
+                <span className="step-number">2</span>
+                <div>
+                  <p>STEP 2</p>
+                  <h3 id="editor-title">SQLを実行する</h3>
                 </div>
                 <span className="sqlite-badge">
                   {dbReady ? `SQLite ${dbVersion}` : "準備中"}
                 </span>
               </div>
-
-              {scenario.id === "table" ? (
-                <div className="anatomy-strip" aria-label="表の用語">
-                  <span>
-                    <b>列</b> 同じ種類のデータ
-                  </span>
-                  <span>
-                    <b>行</b> 1件のデータ
-                  </span>
-                  <span>
-                    <b>セル</b> 1つの値
-                  </span>
-                </div>
-              ) : null}
+              <p className="step-task">{scenario.task}</p>
 
               <div className="editor-wrap">
                 <div className="editor-bar">
@@ -887,16 +1201,152 @@ export default function Home() {
                 ) : sqlError ? (
                   <>
                     <strong>{sqlError.friendly}</strong>
-                    <code>SQLite: {sqlError.raw}</code>
+                    <details className="raw-error">
+                      <summary>SQLiteからの詳細</summary>
+                      <code>{sqlError.raw}</code>
+                    </details>
                   </>
                 ) : (
                   <span>{status}</span>
                 )}
               </div>
+            </section>
 
-              {activeView === "mission" && currentMission.checkpoint ? (
-                <fieldset className="checkpoint">
-                  <legend>確認問題：{currentMission.checkpoint.question}</legend>
+            <section
+              className={`step-card result-step result-${scenario.resultMode}`}
+              aria-labelledby="result-title"
+              ref={resultRef}
+              tabIndex={-1}
+            >
+              <div className="step-heading">
+                <span className="step-number">3</span>
+                <div>
+                  <p>STEP 3</p>
+                  <h3 id="result-title">結果を観察する</h3>
+                </div>
+                {hasResult ? (
+                  <span className="result-badge">{result.rows.length}件</span>
+                ) : null}
+              </div>
+
+              {!hasResult ? (
+                <div className="result-placeholder">
+                  <span aria-hidden="true">▶</span>
+                  <div>
+                    <strong>まだSQLを実行していません</strong>
+                    <p>STEP 2の「実行する」を押すと、ここに結果が表示されます。</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {scenario.resultMode === "anatomy" ? (
+                    <div className="anatomy-key" aria-label="表の用語">
+                      <span><b>列</b>同じ種類のデータ</span>
+                      <span><b>行</b>1件のデータ</span>
+                      <span><b>セル</b>1つの値</span>
+                    </div>
+                  ) : null}
+
+                  <div className="table-scroll">
+                    {result.columns.length ? (
+                      <table className="result-table">
+                        <caption className="sr-only">SQLの実行結果</caption>
+                        <thead>
+                          <tr>
+                            {result.columns.map((column) => (
+                              <th scope="col" key={column}>
+                                {column}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.rows.length ? (
+                            result.rows.map((row, rowIndex) => (
+                              <tr key={`${rowIndex}-${row.join("-")}`}>
+                                {row.map((value, cellIndex) => (
+                                  <td key={`${rowIndex}-${cellIndex}`}>
+                                    {value === null ? (
+                                      <span className="null-value">NULL</span>
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={result.columns.length}>
+                                結果は0件です。
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="empty-result">
+                        <p>SQLは成功しました。表示する行はありません。</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="result-caption">{result.message}</p>
+
+                  <section className="observation" aria-labelledby="observation-title">
+                    <div>
+                      <span aria-hidden="true">✓</span>
+                      <h4 id="observation-title">観察ポイント</h4>
+                    </div>
+                    <ul>
+                      {scenario.observations.map((observation) => (
+                        <li key={observation}>{observation}</li>
+                      ))}
+                    </ul>
+                  </section>
+
+                  {scenario.resultMode === "relation" ? (
+                    <section className="relation-section" aria-labelledby="relation-title">
+                      <div className="relation-heading">
+                        <div>
+                          <h4 id="relation-title">2つのテーブルをキーでつなぐ</h4>
+                          <p>
+                            同じshop_idを使って、商品がどの店舗のものかを表します。
+                          </p>
+                        </div>
+                        <div className="schema-key" aria-label="キーの凡例">
+                          <span><i className="key-swatch pk" />主キー PK</span>
+                          <span><i className="key-swatch fk" />外部キー FK</span>
+                        </div>
+                      </div>
+                      <RelationDiagram />
+                    </section>
+                  ) : null}
+                </>
+              )}
+            </section>
+
+            {activeView === "mission" && currentMission.checkpoint ? (
+              <section className="step-card checkpoint-step" aria-labelledby="checkpoint-title">
+                <div className="step-heading">
+                  <span className="step-number">4</span>
+                  <div>
+                    <p>STEP 4</p>
+                    <h3 id="checkpoint-title">確認問題に答える</h3>
+                  </div>
+                  <span className={`unlock-badge${taskMet ? " is-unlocked" : ""}`}>
+                    {taskMet ? "回答できます" : "実行後に回答"}
+                  </span>
+                </div>
+
+                {!taskMet ? (
+                  <div className="checkpoint-lock" role="note">
+                    <span aria-hidden="true">1→2→3</span>
+                    <p>まずSTEP 2で課題のSQLを成功させ、STEP 3の結果を観察しましょう。</p>
+                  </div>
+                ) : null}
+
+                <fieldset className="checkpoint" disabled={!taskMet}>
+                  <legend>{currentMission.checkpoint.question}</legend>
                   <div className="checkpoint-options">
                     {currentMission.checkpoint.options.map((option) => (
                       <label key={option.id}>
@@ -923,7 +1373,7 @@ export default function Home() {
                     >
                       {checkpointCorrect
                         ? currentMission.checkpoint.explanation
-                        : "もう一度考えてみよう。必要ならヒントを開いて確認できます。"}
+                        : "もう一度考えてみよう。必要なら結果の観察ポイントを確認できます。"}
                     </p>
                   ) : null}
                   <button
@@ -935,167 +1385,8 @@ export default function Home() {
                     このミッションを完了
                   </button>
                 </fieldset>
-              ) : null}
-            </section>
-
-            <section className="panel output-panel" aria-label="実行結果とテーブルの関係">
-              <section className="result-section" aria-labelledby="result-title">
-                <div className="result-header">
-                  <div>
-                    <h3 id="result-title">実行結果</h3>
-                    <p>SQLの結果が行と列の表になります。</p>
-                  </div>
-                  <span className="result-badge">
-                    {result.rows.length}件
-                  </span>
-                </div>
-
-                <div className="table-scroll">
-                  {result.columns.length ? (
-                    <table className="result-table">
-                      <caption className="sr-only">SQLの実行結果</caption>
-                      <thead>
-                        <tr>
-                          {result.columns.map((column) => (
-                            <th scope="col" key={column}>
-                              {column}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.rows.length ? (
-                          result.rows.map((row, rowIndex) => (
-                            <tr key={`${rowIndex}-${row.join("-")}`}>
-                              {row.map((value, cellIndex) => (
-                                <td key={`${rowIndex}-${cellIndex}`}>
-                                  {value === null ? (
-                                    <span className="null-value">NULL</span>
-                                  ) : (
-                                    String(value)
-                                  )}
-                                </td>
-                              ))}
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={result.columns.length}>
-                              結果は0件です。
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="empty-result">
-                      <span aria-hidden="true">▦</span>
-                      <p>SQLを実行すると、ここに結果が表示されます。</p>
-                    </div>
-                  )}
-                </div>
-                <p className="result-caption">{result.message}</p>
               </section>
-
-              <section className="schema-section" aria-labelledby="schema-title">
-                <div className="schema-header">
-                  <div>
-                    <h3 id="schema-title">テーブルの関係</h3>
-                    <p>同じshop_idが2つの表をつなぎます。</p>
-                  </div>
-                  <div className="schema-key" aria-label="キーの凡例">
-                    <span>
-                      <i className="key-swatch pk" aria-hidden="true" />
-                      主キー PK
-                    </span>
-                    <span>
-                      <i className="key-swatch fk" aria-hidden="true" />
-                      外部キー FK
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  className="relationship"
-                  role="img"
-                  aria-label="shopsのshop_id主キーからmenu_itemsのshop_id外部キーへの一対多の関係"
-                >
-                  <section className="table-card" aria-label="shopsテーブル">
-                    <h4>shops</h4>
-                    <ul>
-                      <li className="pk-row">
-                        <span className="key-label pk">PK</span>
-                        <code>shop_id</code>
-                        <small>INTEGER</small>
-                      </li>
-                      <li>
-                        <span className="key-spacer" aria-hidden="true" />
-                        <code>shop_name</code>
-                        <small>TEXT</small>
-                      </li>
-                      <li>
-                        <span className="key-spacer" aria-hidden="true" />
-                        <code>area</code>
-                        <small>TEXT</small>
-                      </li>
-                    </ul>
-                  </section>
-
-                  <div className="relation-line" aria-hidden="true">
-                    <span>1</span>
-                    <i />
-                    <span>多</span>
-                    <b>shop_idで関連付け</b>
-                  </div>
-
-                  <section
-                    className="table-card"
-                    aria-label="menu_itemsテーブル"
-                  >
-                    <h4>menu_items</h4>
-                    <ul>
-                      <li>
-                        <span className="key-label pk">PK</span>
-                        <code>item_id</code>
-                        <small>INTEGER</small>
-                      </li>
-                      <li className="fk-row">
-                        <span className="key-label fk">FK</span>
-                        <code>shop_id</code>
-                        <small>INTEGER</small>
-                      </li>
-                      <li>
-                        <span className="key-spacer" aria-hidden="true" />
-                        <code>item_name</code>
-                        <small>TEXT</small>
-                      </li>
-                      <li>
-                        <span className="key-spacer" aria-hidden="true" />
-                        <code>price</code>
-                        <small>INTEGER</small>
-                      </li>
-                    </ul>
-                  </section>
-                </div>
-
-                <div className="key-explainer">
-                  <div>
-                    <span className="key-label pk">PK</span>
-                    <p>
-                      <strong>主キー</strong>
-                      行を一意に識別する、重複しない値
-                    </p>
-                  </div>
-                  <div>
-                    <span className="key-label fk">FK</span>
-                    <p>
-                      <strong>外部キー</strong>
-                      別の表の主キーを参照して関係を作る値
-                    </p>
-                  </div>
-                </div>
-              </section>
-            </section>
+            ) : null}
           </div>
 
           <footer className="lab-footer">
