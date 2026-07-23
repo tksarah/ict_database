@@ -386,22 +386,29 @@ const QUICK_REFERENCE = [
   {
     command: "CREATE TABLE",
     meaning: "新しいテーブルを作る",
-    example: "CREATE TABLE 表名 (列名 データ型);",
+    syntax: "CREATE TABLE 表名 (列名 データ型);",
+    sample:
+      "CREATE TABLE events (event_id INTEGER PRIMARY KEY, event_name TEXT);",
   },
   {
     command: "INSERT INTO",
     meaning: "テーブルへ1行追加する",
-    example: "INSERT INTO 表名 (列名) VALUES (値);",
+    syntax: "INSERT INTO 表名 (列名1, 列名2) VALUES (値1, 値2);",
+    sample:
+      "INSERT INTO shops (shop_name, area) VALUES ('クレープ広場', '中庭');",
   },
   {
     command: "SELECT",
     meaning: "データを取り出す",
-    example: "SELECT 列名 FROM 表名;",
+    syntax: "SELECT 列名 FROM 表名;",
+    sample: "SELECT shop_name, area FROM shops;",
   },
   {
     command: "WHERE",
     meaning: "取り出す行を条件でしぼる",
-    example: "SELECT 列名 FROM 表名 WHERE 条件;",
+    syntax: "SELECT 列名 FROM 表名 WHERE 条件;",
+    sample:
+      "SELECT item_name, price FROM menu_items WHERE price >= 500;",
   },
 ];
 
@@ -1114,9 +1121,22 @@ export default function Home() {
                   <div className="reference-grid">
                     {QUICK_REFERENCE.map((item) => (
                       <article key={item.command}>
-                        <code>{item.command}</code>
+                        <code className="reference-command">{item.command}</code>
                         <strong>{item.meaning}</strong>
-                        <p>{item.example}</p>
+                        <div className="reference-snippets">
+                          <div>
+                            <span>書式</span>
+                            <pre>
+                              <code>{item.syntax}</code>
+                            </pre>
+                          </div>
+                          <div>
+                            <span>サンプル</span>
+                            <pre>
+                              <code>{item.sample}</code>
+                            </pre>
+                          </div>
+                        </div>
                       </article>
                     ))}
                   </div>

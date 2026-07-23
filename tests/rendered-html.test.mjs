@@ -91,3 +91,26 @@ test("スターター用プレビューを残さない", async () => {
     access(new URL("../app/_sites-preview/preview.css", import.meta.url)),
   );
 });
+
+test("自由SQLラボの早見表に書式と実行サンプルを持つ", async () => {
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(page, /<span>書式<\/span>/);
+  assert.match(page, /<span>サンプル<\/span>/);
+  assert.match(
+    page,
+    /CREATE TABLE events \(event_id INTEGER PRIMARY KEY, event_name TEXT\);/,
+  );
+  assert.match(
+    page,
+    /INSERT INTO shops \(shop_name, area\) VALUES \('クレープ広場', '中庭'\);/,
+  );
+  assert.match(page, /SELECT shop_name, area FROM shops;/);
+  assert.match(
+    page,
+    /SELECT item_name, price FROM menu_items WHERE price >= 500;/,
+  );
+});
