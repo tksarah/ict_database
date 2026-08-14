@@ -139,6 +139,29 @@ test("ミッション3は指定された商品が追加されたときだけ達�
   }
 });
 
+test("発展WHEREは500円を含む4商品だけを取り出す", () => {
+  const db = openLab();
+  try {
+    db.exec(sampleData);
+    const result = query(
+      db,
+      "SELECT item_name, price FROM menu_items WHERE price >= 500 ORDER BY price;",
+    );
+
+    assert.deepEqual(result.rows, [
+      ["たこ焼き", 500],
+      ["カフェラテ", 550],
+      ["ソース焼きそば", 600],
+      ["チーズたこ焼き", 650],
+    ]);
+    assert.ok(result.rows.some((row) => row[1] === 500));
+    assert.ok(result.rows.every((row) => Number(row[1]) >= 500));
+    assert.ok(result.rows.every((row) => row[0] !== "アイスコーヒー"));
+  } finally {
+    db.close();
+  }
+});
+
 test("存在しない表・列と構文ミスをSQLiteが報告する", () => {
   const db = openLab();
   try {

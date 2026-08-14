@@ -93,6 +93,17 @@ test("スターター用プレビューを残さない", async () => {
     page,
     /WHERE item_id = 101 AND shop_id = 1 AND item_name = 'たこ焼き' AND price = 500/,
   );
+  assert.match(page, /function WherePreparationGuide\(\)/);
+  assert.match(page, /まず、しぼり込む前のデータを確認/);
+  assert.match(page, /価格の低い順に見て、500円の境界を探しましょう/);
+  assert.match(page, /アイスコーヒー/);
+  assert.match(page, /チーズたこ焼き/);
+  assert.match(page, /500円の境界/);
+  assert.match(page, /大きい、または等しい/);
+  assert.match(page, /しぼり込み前 <strong>5件<\/strong>/);
+  assert.match(page, /しぼり込み後 <strong>4件<\/strong>/);
+  assert.match(page, /function matchesWhereResult\(table: SqlTable\)/);
+  assert.match(page, /activeView === "bonus"/);
   assert.doesNotMatch(page, /window\.scrollTo\(\{\s*top:\s*0/);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);

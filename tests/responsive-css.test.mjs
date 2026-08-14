@@ -30,12 +30,18 @@ test("PC・タブレット・スマートフォンの配置ルールを持つ", 
   );
   assert.match(
     css,
+    /@media \(max-width:\s*760px\)[\s\S]*\.where-condition-explainer\s*\{[\s\S]*grid-template-columns:\s*1fr/,
+  );
+  assert.match(
+    css,
     /@media \(max-width:\s*460px\)[\s\S]*\.actions \.button\s*\{[\s\S]*width:\s*100%/,
   );
   assert.match(
     css,
     /@media \(max-width:\s*460px\)[\s\S]*\.insert-schema-table td[\s\S]*grid-template-columns:\s*1fr/,
   );
+  assert.match(css, /\.where-data-table/);
+  assert.match(css, /\.where-threshold-row/);
 });
 
 test("読みやすい文字サイズ・フォーカス・動きを抑える設定を持つ", () => {

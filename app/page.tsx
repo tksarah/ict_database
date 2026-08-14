@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   Database,
   Sqlite3Static,
@@ -94,13 +101,20 @@ INSERT INTO shops (shop_id, shop_name, area) VALUES
   (2, 'Coffee Lab', '2号館'),
   (3, '焼きそば工房', '体育館');`;
 
+const MENU_ITEM_ROWS = [
+  { itemId: 101, shopId: 1, itemName: "たこ焼き", price: 500 },
+  { itemId: 102, shopId: 1, itemName: "チーズたこ焼き", price: 650 },
+  { itemId: 201, shopId: 2, itemName: "アイスコーヒー", price: 400 },
+  { itemId: 202, shopId: 2, itemName: "カフェラテ", price: 550 },
+  { itemId: 301, shopId: 3, itemName: "ソース焼きそば", price: 600 },
+] as const;
+
 const MENU_ROWS = `
 INSERT INTO menu_items (item_id, shop_id, item_name, price) VALUES
-  (101, 1, 'たこ焼き', 500),
-  (102, 1, 'チーズたこ焼き', 650),
-  (201, 2, 'アイスコーヒー', 400),
-  (202, 2, 'カフェラテ', 550),
-  (301, 3, 'ソース焼きそば', 600);`;
+${MENU_ITEM_ROWS.map(
+  (item) =>
+    `  (${item.itemId}, ${item.shopId}, '${item.itemName}', ${item.price})`,
+).join(",\n")};`;
 
 const FULL_SEED = `${CREATE_SHOPS}
 ${CREATE_MENU_ITEMS}
@@ -316,7 +330,7 @@ const BONUS_SCENARIO: Scenario = {
   title: "WHEREで条件をしぼろう",
   shortTitle: "発展 WHERE",
   goal: "SELECTへ条件を加え、条件に合う行だけを取り出します。",
-  task: "価格が500円以上の商品だけを取り出してみよう。",
+  task: "一覧を参考に、price列が500円以上の商品を取り出してみよう。",
   expectedKeyword: "SELECT",
   categoryLabel: "DML + 条件",
   categoryName: "データ操作言語",
@@ -342,7 +356,7 @@ const BONUS_SCENARIO: Scenario = {
     "SELECT item_name, price\nFROM menu_items\nWHERE price >= 500;",
   ],
   observations: [
-    "結果には500円以上の商品だけが表示されています。",
+    "500円のたこ焼きも、>= の「等しい」を含むため結果に表示されています。",
     "400円のアイスコーヒーは条件に合わないため表示されません。",
     "条件を変えると、取り出される行も変わります。",
   ],
@@ -650,6 +664,83 @@ function InsertPreparationGuide() {
   );
 }
 
+function WherePreparationGuide() {
+  const sortedItems = [...MENU_ITEM_ROWS].sort(
+    (left, right) => left.price - right.price,
+  );
+
+  return (
+    <section
+      className="insert-preparation where-preparation"
+      aria-labelledby="where-preparation-title"
+    >
+      <div className="insert-preparation-heading">
+        <span className="mini-label">WHEREの前に</span>
+        <h4 id="where-preparation-title">まず、しぼり込む前のデータを確認</h4>
+        <p>
+          <code>menu_items</code>
+          には5件の商品があります。価格の低い順に見て、500円の境界を探しましょう。
+        </p>
+      </div>
+
+      <div className="insert-schema-wrap">
+        <table className="insert-schema-table where-data-table">
+          <caption className="sr-only">
+            menu_itemsテーブルにある全5商品の商品名、価格、500円以上の条件判定
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">商品名</th>
+              <th scope="col">price列</th>
+              <th scope="col">500円以上？</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedItems.map((item) => (
+              <Fragment key={item.itemId}>
+                {item.price === 500 ? (
+                  <tr className="where-threshold-row">
+                    <td colSpan={3} data-label="境界">
+                      <span>500円の境界</span>
+                      <strong>ここから <code>price &gt;= 500</code></strong>
+                    </td>
+                  </tr>
+                ) : null}
+                <tr className={item.price >= 500 ? "where-match-row" : "where-excluded-row"}>
+                  <td data-label="商品名"><strong>{item.itemName}</strong></td>
+                  <td data-label="price列">
+                    <code>{item.price}</code>円
+                    {item.price === 500 ? (
+                      <small className="where-boundary-label">境界の値</small>
+                    ) : null}
+                  </td>
+                  <td data-label="500円以上？">
+                    <span
+                      className={`where-condition-status ${
+                        item.price >= 500 ? "is-match" : "is-excluded"
+                      }`}
+                    >
+                      {item.price >= 500 ? "条件に合う" : "条件に合わない"}
+                    </span>
+                  </td>
+                </tr>
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <aside className="where-condition-explainer" role="note">
+        <code>price &gt;= 500</code>
+        <p>
+          <strong><code>&gt;=</code> は「大きい、または等しい」</strong>
+          500円ちょうどの商品も条件に含まれ、400円の商品だけが外れます。
+        </p>
+      </aside>
+    </section>
+  );
+}
+
 function RelationDiagram() {
   return (
     <div
@@ -711,6 +802,27 @@ function RelationDiagram() {
         </ul>
       </section>
     </div>
+  );
+}
+
+function matchesWhereResult(table: SqlTable) {
+  const itemNameIndex = table.columns.indexOf("item_name");
+  const priceIndex = table.columns.indexOf("price");
+  if (itemNameIndex < 0 || priceIndex < 0) return false;
+
+  const actual = table.rows
+    .map((row) => [String(row[itemNameIndex]), Number(row[priceIndex])] as const)
+    .sort((left, right) => left[1] - right[1]);
+  const expected = MENU_ITEM_ROWS.filter((item) => item.price >= 500)
+    .map((item) => [item.itemName, item.price] as const)
+    .sort((left, right) => left[1] - right[1]);
+
+  return (
+    actual.length === expected.length &&
+    actual.every(
+      (row, index) =>
+        row[0] === expected[index][0] && row[1] === expected[index][1],
+    )
   );
 }
 
@@ -882,7 +994,10 @@ export default function Home() {
       keyword: "CREATE" | "INSERT" | "SELECT",
       table: SqlTable,
     ) => {
-      if (activeView !== "mission") return true;
+      if (activeView === "bonus") {
+        return keyword === "SELECT" && matchesWhereResult(table);
+      }
+      if (activeView === "free") return true;
       if (keyword !== currentMission.expectedKeyword) return false;
 
       if (currentMission.id === "create") {
@@ -1193,6 +1308,7 @@ export default function Home() {
                 </p>
               </div>
               {scenario.id === "insert" ? <InsertPreparationGuide /> : null}
+              {scenario.id === "where" ? <WherePreparationGuide /> : null}
               <div className="syntax-guide" aria-label={`${scenario.commandName}の構文解説`}>
                 {scenario.guideTokens.map((token, index) => (
                   <span
@@ -1430,11 +1546,20 @@ export default function Home() {
                   <p className="result-caption">{result.message}</p>
 
                   {scenario.resultMode === "relation" && taskMet ? (
-                    <div className="insert-row-change" role="status">
+                    <div className="result-count-change" role="status">
                       <span>実行前 <strong>0件</strong></span>
                       <i aria-hidden="true">→</i>
                       <span>実行後 <strong>1件</strong></span>
                       <b>商品が1行追加されました</b>
+                    </div>
+                  ) : null}
+
+                  {scenario.resultMode === "where" && taskMet ? (
+                    <div className="result-count-change" role="status">
+                      <span>しぼり込み前 <strong>5件</strong></span>
+                      <i aria-hidden="true">→</i>
+                      <span>しぼり込み後 <strong>4件</strong></span>
+                      <b>400円の商品だけが外れました</b>
                     </div>
                   ) : null}
 

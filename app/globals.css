@@ -831,6 +831,133 @@ pre {
   font-size: 14px;
 }
 
+.where-data-table th:nth-child(2),
+.where-data-table td:nth-child(2) {
+  width: 150px;
+}
+
+.where-data-table th:nth-child(3),
+.where-data-table td:nth-child(3) {
+  width: 175px;
+}
+
+.where-data-table td:first-child strong {
+  color: var(--ink);
+}
+
+.where-data-table td:nth-child(2) > code {
+  color: var(--primary-dark);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.where-excluded-row {
+  background: var(--paper-muted);
+}
+
+.where-match-row {
+  background: rgba(228, 244, 233, 0.42);
+}
+
+.where-threshold-row td,
+.where-data-table .where-threshold-row:last-child td {
+  padding: 8px 12px;
+  border-top: 3px solid var(--pk);
+  border-bottom: 1px solid #edc38f;
+  background: var(--pk-soft);
+  color: var(--pk-dark);
+}
+
+.where-threshold-row td {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.where-threshold-row span {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.where-threshold-row strong {
+  font-size: 14px;
+}
+
+.where-threshold-row code {
+  color: inherit;
+}
+
+.where-boundary-label {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--pk-soft);
+  color: var(--pk-dark);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 800;
+}
+
+.where-condition-status {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 800;
+}
+
+.where-condition-status.is-match {
+  background: var(--success-soft);
+  color: var(--success-dark);
+}
+
+.where-condition-status.is-excluded {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.where-condition-explainer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #b9d9d3;
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+}
+
+.where-condition-explainer > code {
+  padding: 8px 11px;
+  border-radius: 6px;
+  background: var(--code-surface);
+  color: var(--code-text);
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.where-condition-explainer p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.where-condition-explainer p strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.where-condition-explainer p code {
+  color: var(--primary-dark);
+}
+
 .syntax-guide {
   display: flex;
   align-items: stretch;
@@ -1329,7 +1456,7 @@ pre {
   line-height: 1.5;
 }
 
-.insert-row-change {
+.result-count-change {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1342,16 +1469,16 @@ pre {
   color: var(--success-dark);
 }
 
-.insert-row-change span {
+.result-count-change span {
   white-space: nowrap;
 }
 
-.insert-row-change i {
+.result-count-change i {
   font-style: normal;
   font-weight: 800;
 }
 
-.insert-row-change b {
+.result-count-change b {
   margin-left: auto;
 }
 
@@ -1876,7 +2003,33 @@ pre {
     font-weight: 800;
   }
 
-  .insert-row-change b {
+  .where-data-table th:nth-child(2),
+  .where-data-table td:nth-child(2),
+  .where-data-table th:nth-child(3),
+  .where-data-table td:nth-child(3) {
+    width: auto;
+  }
+
+  .where-threshold-row td,
+  .where-data-table .where-threshold-row:last-child td {
+    display: flex;
+    width: 100%;
+  }
+
+  .where-threshold-row td::before {
+    content: none;
+  }
+
+  .where-condition-explainer {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .where-condition-explainer > code {
+    justify-self: start;
+  }
+
+  .result-count-change b {
     width: 100%;
     margin-left: 0;
   }
@@ -2008,6 +2161,13 @@ pre {
   .insert-value-map pre {
     padding: 12px;
     font-size: 14px;
+  }
+
+  .where-threshold-row td,
+  .where-data-table .where-threshold-row:last-child td {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .syntax-token {
