@@ -80,6 +80,30 @@ test("スターター用プレビューを残さない", async () => {
   assert.match(page, /setHasResult\(false\)/);
   assert.match(page, /pendingMissionScrollRef\.current = true/);
   assert.match(page, /missionTop\.scrollIntoView/);
+  assert.match(page, /function InsertPreparationGuide\(\)/);
+  assert.match(page, /まず、追加先の表を確認/);
+  assert.match(page, /1行が1つの商品を表します/);
+  assert.match(page, /商品を見分ける重複しない番号/);
+  assert.match(page, /商品を販売する店舗の番号/);
+  assert.match(page, /文字列なので引用符で囲む/);
+  assert.match(page, /shops<\/code>の店舗1＝たこ焼き研究会/);
+  assert.match(page, /実行前 <strong>0件<\/strong>/);
+  assert.match(page, /実行後 <strong>1件<\/strong>/);
+  assert.match(
+    page,
+    /WHERE item_id = 101 AND shop_id = 1 AND item_name = 'たこ焼き' AND price = 500/,
+  );
+  assert.match(page, /function WherePreparationGuide\(\)/);
+  assert.match(page, /まず、しぼり込む前のデータを確認/);
+  assert.match(page, /価格の低い順に見て、500円の境界を探しましょう/);
+  assert.match(page, /アイスコーヒー/);
+  assert.match(page, /チーズたこ焼き/);
+  assert.match(page, /500円の境界/);
+  assert.match(page, /大きい、または等しい/);
+  assert.match(page, /しぼり込み前 <strong>5件<\/strong>/);
+  assert.match(page, /しぼり込み後 <strong>4件<\/strong>/);
+  assert.match(page, /function matchesWhereResult\(table: SqlTable\)/);
+  assert.match(page, /activeView === "bonus"/);
   assert.doesNotMatch(page, /window\.scrollTo\(\{\s*top:\s*0/);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
@@ -89,5 +113,28 @@ test("スターター用プレビューを残さない", async () => {
   );
   await assert.rejects(
     access(new URL("../app/_sites-preview/preview.css", import.meta.url)),
+  );
+});
+
+test("自由SQLラボの早見表に書式と実行サンプルを持つ", async () => {
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(page, /<span>書式<\/span>/);
+  assert.match(page, /<span>サンプル<\/span>/);
+  assert.match(
+    page,
+    /CREATE TABLE events \(event_id INTEGER PRIMARY KEY, event_name TEXT\);/,
+  );
+  assert.match(
+    page,
+    /INSERT INTO shops \(shop_name, area\) VALUES \('クレープ広場', '中庭'\);/,
+  );
+  assert.match(page, /SELECT shop_name, area FROM shops;/);
+  assert.match(
+    page,
+    /SELECT item_name, price FROM menu_items WHERE price >= 500;/,
   );
 });
