@@ -80,6 +80,19 @@ test("スターター用プレビューを残さない", async () => {
   assert.match(page, /setHasResult\(false\)/);
   assert.match(page, /pendingMissionScrollRef\.current = true/);
   assert.match(page, /missionTop\.scrollIntoView/);
+  assert.match(page, /function InsertPreparationGuide\(\)/);
+  assert.match(page, /まず、追加先の表を確認/);
+  assert.match(page, /1行が1つの商品を表します/);
+  assert.match(page, /商品を見分ける重複しない番号/);
+  assert.match(page, /商品を販売する店舗の番号/);
+  assert.match(page, /文字列なので引用符で囲む/);
+  assert.match(page, /shops<\/code>の店舗1＝たこ焼き研究会/);
+  assert.match(page, /実行前 <strong>0件<\/strong>/);
+  assert.match(page, /実行後 <strong>1件<\/strong>/);
+  assert.match(
+    page,
+    /WHERE item_id = 101 AND shop_id = 1 AND item_name = 'たこ焼き' AND price = 500/,
+  );
   assert.doesNotMatch(page, /window\.scrollTo\(\{\s*top:\s*0/);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);

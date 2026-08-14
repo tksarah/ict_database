@@ -214,7 +214,8 @@ const MISSIONS: Scenario[] = [
     title: "INSERT INTOでデータを追加しよう",
     shortTitle: "INSERTとキー",
     goal: "新しい行を追加し、主キーと外部キーで2つのテーブルを関連付けます。",
-    task: "店舗1の商品「たこ焼き」をmenu_itemsテーブルへ追加し、キーのつながりを観察しよう。",
+    task:
+      "商品番号101、店舗番号1、商品名「たこ焼き」、価格500円の1行をmenu_itemsテーブルへ追加しよう。",
     expectedKeyword: "INSERT",
     categoryLabel: "DML",
     categoryName: "データ操作言語",
@@ -561,6 +562,94 @@ function SqlOverview() {
   );
 }
 
+function InsertPreparationGuide() {
+  return (
+    <section
+      className="insert-preparation"
+      aria-labelledby="insert-preparation-title"
+    >
+      <div className="insert-preparation-heading">
+        <span className="mini-label">INSERTの前に</span>
+        <h4 id="insert-preparation-title">まず、追加先の表を確認</h4>
+        <p>
+          このミッションでは、<code>menu_items</code>
+          テーブルを用意済みです。1行が1つの商品を表します。
+        </p>
+      </div>
+
+      <div className="insert-schema-wrap">
+        <table className="insert-schema-table">
+          <caption className="sr-only">
+            menu_itemsテーブルの列、データ型とキー、列の意味、今回追加する値
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">列名</th>
+              <th scope="col">型・キー</th>
+              <th scope="col">何を入れる列か</th>
+              <th scope="col">今回の値</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="列名"><code>item_id</code></td>
+              <td data-label="型・キー">
+                <code>INTEGER</code>
+                <span className="schema-key-badge pk">PK</span>
+              </td>
+              <td data-label="何を入れる列か">商品を見分ける重複しない番号</td>
+              <td data-label="今回の値"><code>101</code></td>
+            </tr>
+            <tr>
+              <td data-label="列名"><code>shop_id</code></td>
+              <td data-label="型・キー">
+                <code>INTEGER</code>
+                <span className="schema-key-badge fk">FK</span>
+              </td>
+              <td data-label="何を入れる列か">商品を販売する店舗の番号</td>
+              <td data-label="今回の値" className="insert-shop-value">
+                <code>1</code>
+                <small>
+                  <code>shops</code>の店舗1＝たこ焼き研究会
+                </small>
+              </td>
+            </tr>
+            <tr>
+              <td data-label="列名"><code>item_name</code></td>
+              <td data-label="型・キー"><code>TEXT</code></td>
+              <td data-label="何を入れる列か">
+                商品名。文字列なので引用符で囲む
+              </td>
+              <td data-label="今回の値"><code>&apos;たこ焼き&apos;</code></td>
+            </tr>
+            <tr>
+              <td data-label="列名"><code>price</code></td>
+              <td data-label="型・キー"><code>INTEGER</code></td>
+              <td data-label="何を入れる列か">価格（円）</td>
+              <td data-label="今回の値"><code>500</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="insert-value-map" aria-labelledby="insert-value-map-title">
+        <strong id="insert-value-map-title">列名と値を同じ順番で対応させよう</strong>
+        <pre aria-label="INSERTする列名と値の対応">
+          <code>{`列: (item_id, shop_id, item_name, price)\n値: (    101,       1, 'たこ焼き',   500)`}</code>
+        </pre>
+      </div>
+
+      <aside className="insert-practical-tip" role="note">
+        <strong>SQLで確認するなら</strong>
+        <p>
+          実務では <code>SELECT * FROM menu_items;</code>
+          で現在の列名やデータを確認できます。ただし、型やキーはこの設計図で確認します。このミッションでは確認SQLの実行は必須ではありません。
+        </p>
+      </aside>
+    </section>
+  );
+}
+
 function RelationDiagram() {
   return (
     <div
@@ -812,11 +901,11 @@ export default function Home() {
         );
       }
       if (currentMission.id === "insert") {
-        const count = runTableQuery(
+        const expectedItem = runTableQuery(
           db,
-          "SELECT COUNT(*) FROM menu_items;",
-        ).rows[0]?.[0];
-        return Number(count) >= 1;
+          "SELECT item_id, shop_id, item_name, price FROM menu_items WHERE item_id = 101 AND shop_id = 1 AND item_name = 'たこ焼き' AND price = 500;",
+        );
+        return expectedItem.rows.length >= 1;
       }
       if (currentMission.id === "select") {
         return (
@@ -1103,6 +1192,7 @@ export default function Home() {
                   {scenario.commandDetail}
                 </p>
               </div>
+              {scenario.id === "insert" ? <InsertPreparationGuide /> : null}
               <div className="syntax-guide" aria-label={`${scenario.commandName}の構文解説`}>
                 {scenario.guideTokens.map((token, index) => (
                   <span
@@ -1338,6 +1428,15 @@ export default function Home() {
                     )}
                   </div>
                   <p className="result-caption">{result.message}</p>
+
+                  {scenario.resultMode === "relation" && taskMet ? (
+                    <div className="insert-row-change" role="status">
+                      <span>実行前 <strong>0件</strong></span>
+                      <i aria-hidden="true">→</i>
+                      <span>実行後 <strong>1件</strong></span>
+                      <b>商品が1行追加されました</b>
+                    </div>
+                  ) : null}
 
                   <section className="observation" aria-labelledby="observation-title">
                     <div>

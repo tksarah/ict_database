@@ -26,7 +26,15 @@ test("PC・タブレット・スマートフォンの配置ルールを持つ", 
   );
   assert.match(
     css,
+    /@media \(max-width:\s*760px\)[\s\S]*\.insert-schema-table td[\s\S]*grid-template-columns:\s*minmax\(105px, 0\.8fr\) minmax\(0, 1\.7fr\)/,
+  );
+  assert.match(
+    css,
     /@media \(max-width:\s*460px\)[\s\S]*\.actions \.button\s*\{[\s\S]*width:\s*100%/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*460px\)[\s\S]*\.insert-schema-table td[\s\S]*grid-template-columns:\s*1fr/,
   );
 });
 

@@ -114,6 +114,31 @@ test("参照先のない外部キーをSQLiteが拒否する", () => {
   }
 });
 
+test("ミッション3は指定された商品が追加されたときだけ達成できる", () => {
+  const db = openLab();
+  try {
+    db.exec(`
+      INSERT INTO shops (shop_id, shop_name, area)
+      VALUES (1, 'たこ焼き研究会', '中庭');
+      INSERT INTO menu_items (item_id, shop_id, item_name, price)
+      VALUES (102, 1, 'チーズたこ焼き', 650);
+    `);
+
+    const expectedItemSql =
+      "SELECT item_id, shop_id, item_name, price FROM menu_items WHERE item_id = 101 AND shop_id = 1 AND item_name = 'たこ焼き' AND price = 500;";
+    assert.equal(query(db, expectedItemSql).rows.length, 0);
+
+    db.exec(
+      "INSERT INTO menu_items (item_id, shop_id, item_name, price) VALUES (101, 1, 'たこ焼き', 500);",
+    );
+    assert.deepEqual(query(db, expectedItemSql).rows, [
+      [101, 1, "たこ焼き", 500],
+    ]);
+  } finally {
+    db.close();
+  }
+});
+
 test("存在しない表・列と構文ミスをSQLiteが報告する", () => {
   const db = openLab();
   try {
